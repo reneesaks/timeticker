@@ -13,7 +13,7 @@
 #define M2 10 
 #define M3 11 
 #define M4 12
-#define resetButton 13 
+#define BUTTON 14
 
 /*
  * Assign global variables.
@@ -25,17 +25,20 @@ int secondPos1 = 3;
 int secondPos2 = 4;
 
 // ## Game time ##
-int gameMinutes = 60;               // + 60 seconds
+int gameMinutes = 60;                       // + 60 seconds
 int gameSeconds = gameMinutes * 60;
 
 // ## Technical Variables ##
-const int second = 1000;            // Length of a second in ms
-const int minute = 59;              // Length of a minute in seconds (including 0)
-int refreshRate = 4;                // Amount of time in ms the current number(segment) is displayed
-int previousMillis = 0;             // Keeping track of ms because one segment can be shown at once and sleep() pauses the whole program
-int currentSecond = minute;         // Assign starting point for seconds
-int currentMinute = gameMinutes;    // Assign starting point for minutes
-int buttonState = 0;                // Reset button state
+const int second = 1000;                    // Length of a second in ms
+const int minute = 59;                      // Length of a minute in seconds (including 0)
+const int normalRefreshRate = 4;            // Amount of time in ms the current number(segment) is displayed
+const int stoppedRefreshRate = 40;          // Amount of time in ms the current number(segment) is displayed when time has stopped
+int currentRefreshRate = normalRefreshRate; // Current refresh rate
+int previousMillis = 0;                     // Keeping track of ms because one segment can be shown at once and sleep() pauses the whole program
+int currentSecond = minute;                 // Assign starting point for seconds
+int currentMinute = gameMinutes;            // Assign starting point for minutes
+int buttonState = 0;                        // Current state of the button
+bool timeStopped = false;                   // Check if game time has stopped
 
 /*
  * Set up the pins.
@@ -53,7 +56,7 @@ void setup()
   pinMode(M2, OUTPUT); 
   pinMode(M3, OUTPUT); 
   pinMode(M4, OUTPUT);
-  pinMode(resetButton, INPUT);
+  pinMode(BUTTON, INPUT);
 }
 
 /*
@@ -61,18 +64,16 @@ void setup()
  */
 void loop()
 {
+  // Read the pushbutton input pin:
+  buttonState = digitalRead(BUTTON);
 
-  // Check button state
-  buttonState = digitalRead(resetButton);
-
-  // If button is pressed, reset time
-  if (buttonState == HIGH) {
-    currentSecond = minute;
-    currentMinute = gameMinutes;
+  // If the current state is LOW then the button is off:
+  if (buttonState == LOW) {
+    resetTime();
   }
   
   // Check if time has stopped
-  bool timeStopped = currentSecond == 0 && currentMinute == 0;
+  timeStopped = currentSecond == 0 && currentMinute == 0;
 
   // If time hasn't stopped
   // Else start blinking and wait for reset
@@ -103,8 +104,7 @@ void loop()
     // Show our time
     showTime(firstDigit, secondDigit, thirdDigit, fourthDigit);
   } else {
-    refreshRate = 40;
-    showTime(0, 0, 0, 0);
+    flash();
   }
 }
 
@@ -151,6 +151,25 @@ void show(int module, int number)
 }
 
 /*
+ * Flashes screen to draw attention to it.
+ */
+ void flash()
+ {
+  currentRefreshRate = stoppedRefreshRate;
+  showTime(0, 0, 0, 0);
+ }
+
+ /*
+  * Reset the time and refresh rate.
+  */
+void resetTime()
+{
+  currentSecond = minute;
+  currentMinute = gameMinutes;
+  currentRefreshRate = normalRefreshRate;
+}
+
+/*
  * Clears the screen.
  */
 void dump()
@@ -174,16 +193,16 @@ void dump()
 void showTime(int n1, int n2, int n3, int n4)
 {
   show(minutePos1, n1);
-  delay(refreshRate);
+  delay(currentRefreshRate);
   dump();
   show(minutePos2, n2);
-  delay(refreshRate);
+  delay(currentRefreshRate);
   dump();
   show(secondPos1, n3);
-  delay(refreshRate);
+  delay(currentRefreshRate);
   dump();
   show(secondPos2, n4);
-  delay(refreshRate);
+  delay(currentRefreshRate);
   dump();
 }
 
